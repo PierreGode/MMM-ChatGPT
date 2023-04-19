@@ -27,6 +27,7 @@ In your Magic Mirror's config.js file, add the following configuration object fo
 {
   module: "MMM-ChatGTP",
   position: "top_right",
+  header: "ChatGTP"
   config: {
     apiKey: "YOUR_OPENAI_API_KEY_HERE",
     triggerWord: "elsa"
