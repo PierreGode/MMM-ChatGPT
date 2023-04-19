@@ -1,10 +1,10 @@
-Module.register("MMM-ChatGTP", {
+const chatgpt = require('chatgpt');
+
+Module.register("MMM-ChatGPT", {
   // Default module config.
   defaults: {
-    apiKey: "",
     triggerWord: "",
     maxRecordingTime: 5000, // 5 seconds
-    recognitionLang: "en-US",
     maxDisplayedResults: 1,
     displayDelay: 3000 // 3 seconds
   },
@@ -14,14 +14,13 @@ Module.register("MMM-ChatGTP", {
     Log.info("Starting module: " + this.name);
 
     this.sendSocketNotification("CONNECT_TO_API", {
-      apiKey: this.config.apiKey
+      apiKey: "<your_api_key_here>"
     });
 
     this.listening = false;
     this.recognition = new webkitSpeechRecognition();
     this.recognition.continuous = false;
     this.recognition.interimResults = false;
-    this.recognition.lang = this.config.recognitionLang;
 
     this.recognition.onstart = () => {
       this.listening = true;
@@ -33,12 +32,13 @@ Module.register("MMM-ChatGTP", {
       this.updateDom();
     };
 
-    this.recognition.onresult = (event) => {
+    this.recognition.onresult = async (event) => {
       let question = event.results[0][0].transcript;
       Log.info("User asked: " + question);
-      this.sendSocketNotification("ASK_API", {
+      let response = await chatgpt.ask(question, this.config.maxDisplayedResults);
+      this.sendSocketNotification("API_RESPONSE", {
         question: question,
-        maxDisplayedResults: this.config.maxDisplayedResults
+        response: response,
       });
     };
   },
@@ -46,11 +46,6 @@ Module.register("MMM-ChatGTP", {
   // Override dom generator.
   getDom: function() {
     let wrapper = document.createElement("div");
-
-    // API connection status
-    let apiStatus = document.createElement("div");
-    apiStatus.innerHTML = "API Status: " + (this.connected ? "Connected" : "Disconnected");
-    wrapper.appendChild(apiStatus);
 
     // Microphone listening status
     let micStatus = document.createElement("div");
@@ -62,22 +57,10 @@ Module.register("MMM-ChatGTP", {
 
   // Define socket notification received.
   socketNotificationReceived: function(notification, payload) {
-    if (notification === "API_RESPONSE") {
-      let questionWrapper = document.createElement("div");
-      let question = document.createElement("div");
-      let response = document.createElement("div");
-
-      questionWrapper.className = "small";
-      question.innerHTML = "You: " + payload.question;
-      response.innerHTML = "ChatGPT: " + payload.response;
-
-      questionWrapper.appendChild(question);
-      questionWrapper.appendChild(response);
-      this.fadeIn(questionWrapper, this.config.displayDelay);
-
-      let audio = new Audio();
-      audio.src = "data:audio/wav;base64," + payload.audio;
-      audio.play();
+    if (notification === "CONNECT_TO_API") {
+      chatgpt.init(payload.apiKey);
+    } else if (notification === "TRIGGERED") {
+      this.recognition.start();
     }
   }
 });
