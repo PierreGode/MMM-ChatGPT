@@ -1,4 +1,4 @@
-const chatgpt = require('chatgpt');
+const chatgpt = require('./chatgpt'); // Import the chatgpt module
 
 Module.register("MMM-ChatGPT", {
   // Default module config.
@@ -13,8 +13,10 @@ Module.register("MMM-ChatGPT", {
   start: function() {
     Log.info("Starting module: " + this.name);
 
+    const { apiKey, triggerWord } = this.config;
+
     this.sendSocketNotification("CONNECT_TO_API", {
-      apiKey: "<your_api_key_here>"
+      apiKey: apiKey
     });
 
     this.listening = false;
@@ -35,11 +37,14 @@ Module.register("MMM-ChatGPT", {
     this.recognition.onresult = async (event) => {
       let question = event.results[0][0].transcript;
       Log.info("User asked: " + question);
-      let response = await chatgpt.ask(question, this.config.maxDisplayedResults);
-      this.sendSocketNotification("API_RESPONSE", {
-        question: question,
-        response: response,
-      });
+
+      if (question.includes(triggerWord)) {
+        let response = await chatgpt.ask(question, this.config.maxDisplayedResults);
+        this.sendSocketNotification("API_RESPONSE", {
+          question: question,
+          response: response,
+        });
+      }
     };
   },
 
