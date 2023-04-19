@@ -1,9 +1,9 @@
-const openai = require('openai');
-const fs = require('fs');
-const gtts = require('gtts');
-const NodeHelper = require("node_helper");
-
-module.exports = NodeHelper.create({
+Module.register("MMM-ChatGTP", {
+  
+  defaults: {
+    apiKey: "",
+    triggerWord: "elsa",
+  },
 
   start: function() {
     console.log("Starting module: " + this.name);
