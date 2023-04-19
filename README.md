@@ -16,7 +16,7 @@ cd MMM-ChatGTP/
 Install the necessary dependencies for the module by running the following commands in the terminal within the MMM-ChatGPT folde
 
 ```
-npm install openai
+npm install chatgpt
 npm install speech-recognition
 npm install gtts
 
