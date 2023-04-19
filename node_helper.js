@@ -1,4 +1,4 @@
-const NodeHelper = require("node_helper");
+const chatgpt = require('chatgpt');
 const { spawn } = require("child_process");
 
 module.exports = NodeHelper.create({
@@ -7,11 +7,12 @@ module.exports = NodeHelper.create({
     console.log("Starting module: " + this.name);
   },
 
-  socketNotificationReceived: function(notification, payload) {
+  socketNotificationReceived: async function (notification, payload) {
     if (notification === "TRIGGERED") {
       this.startRecording();
-    } else if (notification === "AUDIO") {
-      this.playAudioResponse(payload);
+    } else if (notification === "RECORDED") {
+      let response = await chatgpt.reply(payload);
+      this.sendSocketNotification("AUDIO", response.audio);
     }
   },
 
@@ -29,13 +30,5 @@ module.exports = NodeHelper.create({
   stopRecording: function(arecord) {
     //Stop recording audio
     arecord.kill("SIGINT");
-  },
-
-  playAudioResponse: function(audio) {
-    //Play audio response through speakers
-    const aplay = spawn("aplay");
-    aplay.stdin.write(audio);
-    aplay.stdin.end();
-  },
-
+  }
 });
