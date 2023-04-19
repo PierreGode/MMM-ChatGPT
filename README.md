@@ -10,7 +10,7 @@ Open your terminal and navigate to the modules folder of your Magic Mirror insta
 cd ~/MagicMirror/modules/
 ```
 
-Clone the "MMM-ChatGPT" module from its Github repository by running
+Clone the "MMM-ChatGPT" module from Github repository by running
 ```
 git clone https://github.com/PierreGode/MMM-ChatGPT.git
 ```
