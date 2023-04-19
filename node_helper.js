@@ -1,4 +1,4 @@
-const chatgpt = require('chatgpt');
+import chatgpt from 'chatgpt';
 const { spawn } = require("child_process");
 
 module.exports = NodeHelper.create({
