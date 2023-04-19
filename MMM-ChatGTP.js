@@ -41,14 +41,14 @@ Module.register("MMM-ChatGTP", {
     var wrapper = document.createElement("div");
     wrapper.className = "medium bright";
 
+    var self = this;
+
     // show status message based on API connection status
     if (this.connected) {
       wrapper.innerHTML = "Connected to OpenAI API";
     } else {
       wrapper.innerHTML = "Connecting to OpenAI API...";
     }
-
-    var self = this;
 
     // function to update the UI when listening starts
     var updateListeningUI = function() {
@@ -57,7 +57,7 @@ Module.register("MMM-ChatGTP", {
 
     // function to update the UI when listening stops
     var updateIdleUI = function() {
-      wrapper.innerHTML = "Idle";
+      wrapper.innerHTML = self.connected ? "Idle" : "Connecting to OpenAI API...";
     };
 
     // function to convert voice commands to text
@@ -98,7 +98,7 @@ Module.register("MMM-ChatGTP", {
 
     // function to check if trigger word is spoken
     var checkTriggerWord = function(event) {
-            var result = event.results[event.results.length - 1][0].transcript;
+      var result = event.results[event.results.length - 1][0].transcript;
       if (result.toLowerCase().indexOf(self.config.triggerWord) !== -1) {
         transcribeSpeechToText();
       }
@@ -106,7 +106,7 @@ Module.register("MMM-ChatGTP", {
 
     // start listening for trigger word
     this.recognizer.start();
-    updateIdleUI(); // set the initial UI state to "Idle"
+    updateIdleUI(); // set the initial UI state based on the API connection status
     this.recognizer.onresult = checkTriggerWord;
     this.recognizer.onerror = function(event) {
       console.error(event.error);
@@ -117,11 +117,14 @@ Module.register("MMM-ChatGTP", {
       openai.Usage.retrieve({}, function(err, usage) {
         if (err) {
           console.error("Error connecting to OpenAI API: " + err.message);
-          wrapper.innerHTML = "Error connecting to OpenAI API";
+          self.connected = false;
+          self.updateDom();
           return;
         }
 
         console.log("Connected to OpenAI API. Usage:", usage);
+        self.connected = true;
+        self.updateDom();
       });
     }, 10000);
 
