@@ -1,71 +1,141 @@
-const chatgpt = require('./chatgpt'); // Import the chatgpt module
-
 Module.register("MMM-ChatGPT", {
   // Default module config.
   defaults: {
-    triggerWord: "",
-    maxRecordingTime: 5000, // 5 seconds
-    maxDisplayedResults: 1,
-    displayDelay: 3000 // 3 seconds
+    apiKey: "",
+    triggerWord: "elsa"
   },
 
-  // Define start sequence.
-  start: function() {
+  start: function () {
     Log.info("Starting module: " + this.name);
 
-    const { apiKey, triggerWord } = this.config;
-
-    this.sendSocketNotification("CONNECT_TO_API", {
-      apiKey: apiKey
-    });
-
     this.listening = false;
-    this.recognition = new webkitSpeechRecognition();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = false;
 
-    this.recognition.onstart = () => {
-      this.listening = true;
-      this.updateDom();
-    };
+    // Load the chatgpt module.
+    const ChatGPT = require("chatgpt");
+    this.chatgpt = new ChatGPT(this.config.apiKey);
 
-    this.recognition.onend = () => {
-      this.listening = false;
-      this.updateDom();
-    };
+    // Load the speech-recognition and gtts modules.
+    const SpeechRecognition = require("speech-recognition");
+    this.speechRecog = new SpeechRecognition();
+    this.gTTS = require("gtts");
 
-    this.recognition.onresult = async (event) => {
-      let question = event.results[0][0].transcript;
-      Log.info("User asked: " + question);
-
-      if (question.includes(triggerWord)) {
-        let response = await chatgpt.ask(question, this.config.maxDisplayedResults);
-        this.sendSocketNotification("API_RESPONSE", {
-          question: question,
-          response: response,
-        });
+    // Add event listener for the trigger word.
+    const self = this;
+    this.handler = function (transcript) {
+      if (transcript.toLowerCase().includes(self.config.triggerWord)) {
+        self.listening = true;
+        self.sendSocketNotification("LISTENING", true);
+        self.showModule();
+        self.speechRecog.startListening();
       }
     };
+    this.speechRecog.addEventListener("result", function (event) {
+      const transcript = event.results[0][0].transcript;
+      self.handleTranscript(transcript);
+    });
+    this.speechRecog.addEventListener("end", function (event) {
+      if (self.listening) {
+        self.speechRecog.startListening();
+      }
+    });
+    this.speechRecog.addEventListener("error", function (event) {
+      console.log("Speech recognition error: ", event.error);
+    });
+    this.speechRecog.setTriggerWords([this.config.triggerWord]);
   },
 
   // Override dom generator.
-  getDom: function() {
-    let wrapper = document.createElement("div");
+  getDom: function () {
+    const wrapper = document.createElement("div");
 
-    // Microphone listening status
-    let micStatus = document.createElement("div");
-    micStatus.innerHTML = "Microphone: " + (this.listening ? "Listening" : "Not Listening");
-    wrapper.appendChild(micStatus);
+    if (this.listening) {
+      wrapper.innerHTML = "Listening...";
+    } else {
+      wrapper.innerHTML = "Say '" + this.config.triggerWord + "' to start.";
+    }
 
     return wrapper;
   },
 
-  // Define socket notification received.
-  socketNotificationReceived: function(notification, payload) {
-    if (notification === "CONNECT_TO_API") {
-      chatgpt.init(payload.apiKey);
-    } else if (notification === "TRIGGERED") {
-      this.recognition.start();
+  // Handle transcript from speech recognition.
+  handleTranscript: function (transcript) {
+    const self = this;
+    if (transcript.toLowerCase().includes("stop")) {
+      self.hideModule();
+      self.speechRecog.stopListening();
+      self.listening = false;
+      self.sendSocketNotification("LISTENING", false);
+      return;
     }
+    const text = transcript.replace(self.config.triggerWord, "").trim();
+    if (text) {
+      self.chatgpt.sendMessage(text).then(function (response) {
+        self.displayResponse(text, response.text);
+        self.playAudio(response.text);
+      }).catch(function (error) {
+        console.log("ChatGPT error: ", error);
+      });
+    }
+  },
+
+  // Display response on the Magic Mirror.
+  displayResponse: function (question, answer) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "bright medium";
+
+    const qElem = document.createElement("span");
+    qElem.innerHTML = question + " ";
+
+    const aElem = document.createElement("span");
+    aElem.innerHTML = answer;
+
+    wrapper.appendChild(qElem);
+    wrapper.appendChild(aElem);
+
+    this.sendNotification("SHOW_ALERT", { message: wrapper.innerHTML });
+  },
+  
+  // Play audio response using gTTS.
+  playAudio: function (text) {
+    const self = this;
+    const speech = new this.gTTS(text, "en");
+    const url = "data:audio/mp3;base64,";
+    speech.save("audio.mp3", function () {
+      fetch(url + btoa(speech.getBase64String())).then(function (response) {
+        response.blob().then(function (blob) {
+          const audio = new Audio(URL.createObjectURL(blob));
+          audio.play();
+        });
+      });
+    });
+  },
+
+  // Show the module on the Magic Mirror.
+  showModule: function () {
+    const self = this;
+    self.show(1000, function () {
+      self.sendSocketNotification("LISTENING", true);
+    });
+  },
+
+  // Hide the module on the Magic Mirror.
+  hideModule: function () {
+    const self = this;
+    self.hide(1000, function () {
+      self.sendSocketNotification("LISTENING", false);
+    });
+  },
+
+  // Send socket notifications to other modules.
+  socketNotificationReceived: function (notification, payload) {
+    if (notification === "LISTENING") {
+      this.listening = payload;
+      this.updateDom();
+    }
+  },
+
+  // Send configuration options to node_helper.js.
+  getConfiguration: function () {
+    return this.config;
   }
 });
