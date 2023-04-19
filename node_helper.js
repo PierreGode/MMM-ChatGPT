@@ -1,34 +1,28 @@
 const NodeHelper = require("node_helper");
-const openai = require("openai");
-const fs = require("fs");
+const { ChatGPTAPI } = require("chatgpt");
 const gtts = require("gtts");
+const fs = require("fs");
 
 module.exports = NodeHelper.create({
 
   start: function () {
     console.log("Starting module: " + this.name);
     this.config = {};
+    this.chatgpt = null;
   },
 
   socketNotificationReceived: function (notification, payload) {
     if (notification === "CONFIG") {
       this.config = payload;
-      openai.apiKey = this.config.apiKey;
-    } else if (notification === "QUESTION") {
-      openai.completions.create({
-        engine: "davinci",
-        prompt: payload,
-        maxTokens: 150,
-        n: 1,
-        stop: "\n",
-      }).then((response) => {
-        let answer = response.data.choices[0].text.trim();
+      this.chatgpt = new ChatGPTAPI({ apiKey: this.config.apiKey });
+    } else if (notification === "SEND_MESSAGE") {
+      this.chatgpt.sendMessage(payload).then((response) => {
+        let answer = response.text.trim();
         let tts = new gtts(answer);
         tts.save("audio.mp3", () => {
           let audio = fs.readFileSync("audio.mp3").toString("base64");
-          this.sendSocketNotification("RESPONSE", {
-            question: payload,
-            answer: answer,
+          this.sendSocketNotification("MESSAGE_RECEIVED", {
+            message: answer,
             audio: audio
           });
         });
