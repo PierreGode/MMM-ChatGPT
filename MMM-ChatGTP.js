@@ -92,28 +92,29 @@ Module.register("MMM-ChatGTP", {
         }
     };
 
-    // start listening for trigger word
-    this.recognizer.start();
-    updateIdleUI(); // set the initial UI state to "Idle"
-    this.recognizer.onresult = checkTriggerWord;
-    this.recognizer.onerror = function(event) {
-        console.error(event.error);
-    };
+// start listening for trigger word
+this.recognizer.start();
+updateIdleUI(); // set the initial UI state to "Idle"
+this.recognizer.onresult = checkTriggerWord;
+this.recognizer.onerror = function(event) {
+    console.error(event.error);
+};
 
-    setInterval(function() {
-        // check if the API key is still valid
-        openai.Usage.retrieve({}, function(err, usage) {
-            if (err) {
-                console.error("Error connecting to OpenAI API: " + err.message);
-                wrapper.innerHTML = "Error connecting to OpenAI API";
-                return;
-            }
+setInterval(function() {
+    // check if the API key is still valid
+    openai.Usage.retrieve({}, function(err, usage) {
+        if (err) {
+            console.error("Error connecting to OpenAI API: " + err.message);
+            wrapper.innerHTML = "Error connecting to OpenAI API";
+            return;
+        }
 
-            console.log("Connected to OpenAI API. Usage:", usage);
-        });
-    }, 10000);
+        console.log("Connected to OpenAI API. Usage:", usage);
+        var statusWrapper = document.createElement("div");
+        statusWrapper.innerHTML = "Connected to OpenAI API";
+        wrapper.appendChild(statusWrapper);
+    });
+}, 10000);
 
-    return wrapper;
-  }
-});
+return wrapper;
 
