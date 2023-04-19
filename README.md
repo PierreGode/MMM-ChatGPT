@@ -10,6 +10,14 @@ git clone https://github.com/PierreGode/MMM-ChatGTP.git.
 Install the necessary dependencies for the module by running the following commands in the terminal within the MMM-ChatGTP folde
 
 ```
+npm install openai
+npm install speech-recognition
+npm install gtts
+
+```
+In your Magic Mirror's config.js file, add the following configuration object for the "MMM-ChatGTP" module:
+
+```
 {
   module: "MMM-ChatGTP",
   position: "top_right",
