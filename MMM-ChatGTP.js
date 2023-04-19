@@ -1,133 +1,128 @@
-Module.register("MMM-ChatGTP", {
-  defaults: {
-    apiKey: "",
-    triggerWord: "elsa"
-  },
+const openai = require('openai');
+const fs = require('fs');
+const gtts = require('gtts');
+const NodeHelper = require("node_helper");
+
+module.exports = NodeHelper.create({
 
   start: function() {
-    Log.info("Starting module: " + this.name);
-
-    var self = this;
-
-    // initialize the API client with your API key
-    openai.api_key = this.config.apiKey;
-
-    // check if the API key is valid
-    openai.Usage.retrieve({}, function(err, usage) {
-      if (err) {
-        console.error("Error connecting to OpenAI API: " + err.message);
-        self.updateDom();
-        return;
-      }
-
-      console.log("Connected to OpenAI API. Usage:", usage);
-      self.connected = true;
-      self.updateDom();
-    });
-
-    // initialize the speech recognition engine
-    this.recognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition)();
-    this.recognizer.continuous = true;
-    this.recognizer.interimResults = false;
-
-    // function to generate audio from text
-    this.generateAudioFromText = function(text) {
-      var tts = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(tts);
-    };
+    console.log("Starting module: " + this.name);
+    this.answer = "";
+    this.question = "";
+    this.recognizing = false;
+    this.triggered = false;
+    this.audio = null;
+    this.recognize();
   },
 
-  getDom: function() {
-    var wrapper = document.createElement("div");
-    wrapper.className = "medium bright";
-
-    var self = this;
-
-    // show status message based on API connection status
-    if (this.connected) {
-      wrapper.innerHTML = "Connected to OpenAI API";
-    } else {
-      wrapper.innerHTML = "Connecting to OpenAI API...";
-    }
-
-    // function to update the UI when listening starts
-    var updateListeningUI = function() {
-      wrapper.innerHTML = "Listening...";
+  recognize: function() {
+    //Set up speech recognition
+    const speech = require('@google-cloud/speech');
+    const client = new speech.SpeechClient();
+    const request = {
+      config: {
+        encoding: 'LINEAR16',
+        sampleRateHertz: 16000,
+        languageCode: 'en-US',
+      },
+      interimResults: false,
     };
-
-    // function to update the UI when listening stops
-    var updateIdleUI = function() {
-      wrapper.innerHTML = self.connected ? "Idle" : "Connecting to OpenAI API...";
-    };
-
-    // function to convert voice commands to text
-    var transcribeSpeechToText = function() {
-      updateListeningUI(); // update the UI to indicate that the module is listening
-      self.recognizer.start();
-      console.log("Listening...");
-
-      self.recognizer.onresult = function(event) {
-        var result = event.results[event.results.length - 1][0].transcript;
-        console.log("Question: " + result);
-
-        // send text request to OpenAI API
-        var response = openai.Completion.create({
-          engine: "text-davinci-002",
-          prompt: result,
-          maxTokens: 1024,
-          n: 1,
-          stop: null,
-          temperature: 0.5
-        });
-
-        // extract response text from API response
-        var responseText = response.choices[0].text;
-        console.log("Response: " + responseText);
-
-        // generate audio from response text
-        self.generateAudioFromText(responseText);
-
-        // display response on the mirror
-        var responseWrapper = document.createElement("div");
-        responseWrapper.innerHTML = "<p><span style='color: #ff0000;'>Question: </span>" + result + "</p>" + "<p><span style='color: #00ff00;'>Answer: </span>" + responseText + "</p>";
-        wrapper.appendChild(responseWrapper);
-
-        updateIdleUI(); // update the UI to indicate that the module is no longer listening
-      };
-    };
-
-    // function to check if trigger word is spoken
-    var checkTriggerWord = function(event) {
-      var result = event.results[event.results.length - 1][0].transcript;
-      if (result.toLowerCase().indexOf(self.config.triggerWord) !== -1) {
-        transcribeSpeechToText();
-      }
-    };
-
-    // start listening for trigger word
-    this.recognizer.start();
-    updateIdleUI(); // set the initial UI state based on the API connection status
-    this.recognizer.onresult = checkTriggerWord;
-    this.recognizer.onerror = function(event) {
-      console.error(event.error);
-    };
-
-    setInterval(function() {
-      // check if the API key is still valid
-      openai.Usage.retrieve({}, function(err, usage) {
-        if (err) {
-          console.error("Error connecting to OpenAI API: " + err.message);
-          self.connected = false;
-          self.updateDom();
-          return;
+    const recognizeStream = client.streamingRecognize(request)
+    .on('error', console.error)
+    .on('data', data => {
+      if(data.results[0] && data.results[0].alternatives[0]) {
+        const transcript = data.results[0].alternatives[0].transcript.toLowerCase();
+        if(transcript.includes(this.config.triggerWord) && !this.triggered) {
+          this.triggered = true;
+          this.sendSocketNotification("TRIGGERED", {});
+          this.startRecognition();
         }
+      }
+    });
+  },
 
-        console.log("Connected to OpenAI API. Usage:", usage);
-        self.connected = true;
-        self.updateDom();
-      });
-    }, 10000);
+  startRecognition: function() {
+    //Start listening for user's question
+    this.recognizing = true;
+    this.question = "";
+    const speech = require('@google-cloud/speech');
+    const client = new speech.SpeechClient();
+    const request = {
+      config: {
+        encoding: 'LINEAR16',
+        sampleRateHertz: 16000,
+        languageCode: 'en-US',
+      },
+      interimResults: false,
+    };
+    const recognizeStream = client.streamingRecognize(request)
+    .on('error', console.error)
+    .on('data', data => {
+      if(data.results[0] && data.results[0].alternatives[0]) {
+        const transcript = data.results[0].alternatives[0].transcript;
+        this.question += transcript;
+        if(transcript.endsWith("?")) {
+          this.recognizing = false;
+          this.sendSocketNotification("QUESTION", this.question);
+          this.answerQuestion(this.question);
+        }
+      }
+    });
+  },
 
-    return wrapper;
-  }
+  answerQuestion: async function(question) {
+    //Send question to OpenAI API and get answer
+    const openai = require('openai');
+    const api_key = this.config.apiKey;
+    const prompt = `Q: ${question}\nA:`;
+    const model = 'davinci';
+    const response = await openai.Completion.create({
+      engine: model,
+      prompt: prompt,
+      maxTokens: 1024,
+      n: 1,
+      stop: '\n',
+      apiKey: api_key,
+    });
+    this.answer = response.choices[0].text;
+    console.log("Answer: " + this.answer);
+    this.sendSocketNotification("ANSWER", this.answer);
+    this.generateAudioResponse(this.answer);
+  },
+  generateAudioResponse: function(answer) {
+    //Generate audio response from text
+    const gtts = require('gtts');
+    const filename = "modules/MMM-ChatGTP/response.mp3";
+    const tts = new gtts(answer, 'en');
+    tts.save(filename, function(err, result) {
+      if(err) {
+        console.log(err);
+      }
+      else {
+        this.audio = fs.readFileSync(filename);
+        this.sendSocketNotification("AUDIO", this.audio);
+        this.playAudioResponse();
+      }
+    });
+  },
+
+  playAudioResponse: function() {
+    //Play audio response through speakers
+    const Speaker = require('speaker');
+    const lame = require('lame');
+    const decoder = new lame.Decoder();
+    const speaker = new Speaker();
+    decoder.on('format', function(format) {
+      speaker.format = format;
+    });
+    decoder.pipe(speaker);
+    decoder.write(this.audio);
+  },
+
+  socketNotificationReceived: function(notification, payload) {
+    if(notification === "CONFIG") {
+      this.config = payload;
+    }
+  },
+
 });
