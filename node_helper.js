@@ -1,6 +1,5 @@
 const NodeHelper = require("node_helper");
-const { exec } = require("child_process");
-const { spawn } = require('child_process');
+const { spawn } = require("child_process");
 
 module.exports = NodeHelper.create({
 
@@ -9,10 +8,9 @@ module.exports = NodeHelper.create({
   },
 
   socketNotificationReceived: function(notification, payload) {
-    if(notification === "TRIGGERED") {
+    if (notification === "TRIGGERED") {
       this.startRecording();
-    }
-    else if(notification === "AUDIO") {
+    } else if (notification === "AUDIO") {
       this.playAudioResponse(payload);
     }
   },
