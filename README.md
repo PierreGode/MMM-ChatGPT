@@ -1,7 +1,6 @@
 # MMM-ChatGTP
 Chatgpt Magic mirror module
-´´´
-
+```
 {
   module: "MMM-ChatGTP",
   position: "top_right",
@@ -10,4 +9,4 @@ Chatgpt Magic mirror module
     triggerWord: "elsa"
   }
 }
-´´´
+```
