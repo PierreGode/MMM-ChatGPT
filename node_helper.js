@@ -1,95 +1,41 @@
 const NodeHelper = require("node_helper");
-const openai = require("openai");
-const SpeechToText = require("speech-recognition");
-const gtts = require("gtts");
-const fs = require("fs");
-const os = require("os");
+const { spawn } = require("child_process");
 
 module.exports = NodeHelper.create({
-  // Define start sequence.
+
   start: function() {
     console.log("Starting module: " + this.name);
-    this.connected = false;
-    this.apiKey = "";
   },
 
-  // Define required socket notification received.
   socketNotificationReceived: function(notification, payload) {
-    if (notification === "CONNECT_TO_API") {
-      this.connectToApi(payload.apiKey);
-    } else if (notification === "ASK_API") {
-      this.askApi(payload.question, payload.maxDisplayedResults);
+    if (notification === "TRIGGERED") {
+      this.startRecording();
+    } else if (notification === "AUDIO") {
+      this.playAudioResponse(payload);
     }
   },
 
-  // Define function to connect to OpenAI API.
-  connectToApi: function(apiKey) {
-    console.log("Connecting to OpenAI API...");
-    this.apiKey = apiKey;
-    openai.apiKey = apiKey;
-    openai.Completion.create({
-      engine: "text-davinci-002",
-      prompt: "Hello world",
-      maxTokens: 1
-    }).then((response) => {
-      this.connected = true;
-      console.log("Connected to OpenAI API");
-    }).catch((error) => {
-      console.error("Error connecting to OpenAI API: " + error);
+  startRecording: function() {
+    //Start recording audio
+    const arecord = spawn("arecord", ["-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-t", "raw"]);
+    const lame = spawn("lame", ["-r", "-s", "16", "-m", "m", "-", "-"]);
+    arecord.stdout.pipe(lame.stdin);
+    lame.stdout.on("data", data => {
+      this.sendSocketNotification("RECORDED", data);
+      this.stopRecording(arecord);
     });
   },
 
-  // Define function to ask OpenAI API.
-  askApi: function(question, maxDisplayedResults) {
-    if (!this.connected) {
-      console.error("Error: Not connected to OpenAI API");
-      return;
-    }
+  stopRecording: function(arecord) {
+    //Stop recording audio
+    arecord.kill("SIGINT");
+  },
 
-    console.log("Asking OpenAI API...");
-    openai.Completion.create({
-      engine: "text-davinci-002",
-      prompt: question,
-      maxTokens: 1024,
-      n: 1,
-      stop: null,
-      temperature: 0.5
-    }).then((response) => {
-      let result = response.choices[0].text.trim();
+  playAudioResponse: function(audio) {
+    //Play audio response through speakers
+    const aplay = spawn("aplay");
+    aplay.stdin.write(audio);
+    aplay.stdin.end();
+  },
 
-      // Split result into array of sentences
-      let sentences = result.match(/[^\.!\?]+[\.!\?]+/g);
-
-      // Limit the number of displayed results
-      if (sentences.length > maxDisplayedResults) {
-        sentences = sentences.slice(0, maxDisplayedResults);
-      }
-
-      // Join the sentences into a single string
-      result = sentences.join(" ");
-
-      console.log("OpenAI API response: " + result);
-
-      // Generate audio file
-      let gttsText = new gtts(result);
-      let tempFile = os.tmpdir() + "/MMM-ChatGTP-audio-" + Date.now() + ".wav";
-      gttsText.save(tempFile, (error) => {
-        if (error) {
-          console.error("Error generating audio: " + error);
-          return;
-        }
-        let audioData = fs.readFileSync(tempFile);
-        let audioBase64 = audioData.toString("base64");
-        fs.unlinkSync(tempFile);
-
-        this.sendSocketNotification("API_RESPONSE", {
-          question: question,
-          response: result,
-          audio: audioBase64
-        });
-      });
-    }).catch((error) => {
-      console.error("Error asking OpenAI API: " + error);
-    });
-  }
 });
