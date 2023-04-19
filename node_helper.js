@@ -1,34 +1,46 @@
-import chatgpt from 'chatgpt';
-const { spawn } = require("child_process");
+const NodeHelper = require("node_helper");
+const SpeechRecognition = require("speech-recognition");
 
 module.exports = NodeHelper.create({
 
-  start: function() {
-    console.log("Starting module: " + this.name);
-  },
-
-  socketNotificationReceived: async function (notification, payload) {
-    if (notification === "TRIGGERED") {
-      this.startRecording();
-    } else if (notification === "RECORDED") {
-      let response = await chatgpt.reply(payload);
-      this.sendSocketNotification("AUDIO", response.audio);
-    }
-  },
-
-  startRecording: function() {
-    //Start recording audio
-    const arecord = spawn("arecord", ["-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-t", "raw"]);
-    const lame = spawn("lame", ["-r", "-s", "16", "-m", "m", "-", "-"]);
-    arecord.stdout.pipe(lame.stdin);
-    lame.stdout.on("data", data => {
-      this.sendSocketNotification("RECORDED", data);
-      this.stopRecording(arecord);
+  start: function () {
+    console.log("Starting node helper: " + this.name);
+    this.listening = false;
+    this.speechRecog = new SpeechRecognition();
+    this.speechRecog.setTriggerWords(["magic mirror"]);
+    const self = this;
+    this.handler = function (transcript) {
+      if (transcript.toLowerCase().includes("magic mirror")) {
+        self.listening = true;
+        self.sendSocketNotification("LISTENING", true);
+        self.speechRecog.startListening();
+      }
+    };
+    this.speechRecog.addEventListener("result", function (event) {
+      const transcript = event.results[0][0].transcript;
+      self.sendSocketNotification("TRANSCRIPT", transcript);
+    });
+    this.speechRecog.addEventListener("end", function (event) {
+      if (self.listening) {
+        self.speechRecog.startListening();
+      }
+    });
+    this.speechRecog.addEventListener("error", function (event) {
+      console.log("Speech recognition error: ", event.error);
     });
   },
 
-  stopRecording: function(arecord) {
-    //Stop recording audio
-    arecord.kill("SIGINT");
+  // Override socketNotificationReceived method.
+  socketNotificationReceived: function (notification, payload) {
+    if (notification === "LISTENING") {
+      this.listening = payload;
+      if (this.listening) {
+        this.speechRecog.addEventListener("result", this.handler);
+        this.speechRecog.startListening();
+      } else {
+        this.speechRecog.removeEventListener("result", this.handler);
+        this.speechRecog.stopListening();
+      }
+    }
   }
 });
