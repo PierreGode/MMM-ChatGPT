@@ -10,6 +10,9 @@ Clone the "MMM-ChatGTP" module from its Github repository by running
 ```
 git clone https://github.com/PierreGode/MMM-ChatGTP.git
 ```
+```
+cd MMM-ChatGTP/
+```
 Install the necessary dependencies for the module by running the following commands in the terminal within the MMM-ChatGTP folde
 
 ```
