@@ -10,6 +10,16 @@ Module.register("MMM-ChatGTP", {
     // initialize the API client with your API key
     openai.api_key = this.config.apiKey;
 
+    // check if the API key is valid
+    openai.Usage.retrieve({}, function(err, usage) {
+        if (err) {
+            console.error("Error connecting to OpenAI API: " + err.message);
+            return;
+        }
+
+        console.log("Connected to OpenAI API. Usage:", usage);
+    });
+
     // initialize the speech recognition engine
     this.recognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition || window.mozSpeechRecognition || window.msSpeechRecognition)();
     this.recognizer.continuous = true;
@@ -17,8 +27,8 @@ Module.register("MMM-ChatGTP", {
 
     // function to generate audio from text
     this.generateAudioFromText = function(text) {
-      var tts = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(tts);
+        var tts = new SpeechSynthesisUtterance(text);
+        speechSynthesis.speak(tts);
     };
   },
 
@@ -90,6 +100,20 @@ Module.register("MMM-ChatGTP", {
         console.error(event.error);
     };
 
+    setInterval(function() {
+        // check if the API key is still valid
+        openai.Usage.retrieve({}, function(err, usage) {
+            if (err) {
+                console.error("Error connecting to OpenAI API: " + err.message);
+                wrapper.innerHTML = "Error connecting to OpenAI API";
+                return;
+            }
+
+            console.log("Connected to OpenAI API. Usage:", usage);
+        });
+    }, 10000);
+
     return wrapper;
-}
+  }
 });
+
