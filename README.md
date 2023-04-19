@@ -15,7 +15,7 @@ Clone the "MMM-ChatGPT" module from its Github repository by running
 git clone https://github.com/PierreGode/MMM-ChatGPT.git
 ```
 ```
-cd MMM-ChatGTP/
+cd MMM-ChatGPT/
 ```
 Install the necessary dependencies for the module by running the following commands in the terminal within the MMM-ChatGPT folde
 
