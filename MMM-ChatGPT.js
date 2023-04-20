@@ -56,8 +56,7 @@ Module.register("MMM-ChatGPT", {
 
     return wrapper;
   },
-
-  // Handle transcript from speech recognition.
+// Handle transcript from speech recognition.
   handleTranscript: function (transcript) {
     const self = this;
     if (transcript.toLowerCase().includes("stop")) {
@@ -109,33 +108,3 @@ Module.register("MMM-ChatGPT", {
       });
     });
   },
-
-  // Show the module on the Magic Mirror.
-  showModule: function () {
-    const self = this;
-    self.show(1000, function () {
-      self.sendSocketNotification("LISTENING", true);
-    });
-  },
-
-  // Hide the module on the Magic Mirror.
-  hideModule: function () {
-    const self = this;
-    self.hide(1000, function () {
-      self.sendSocketNotification("LISTENING", false);
-    });
-  },
-
-  // Send socket notifications to other modules.
-  socketNotificationReceived: function (notification, payload) {
-    if (notification === "LISTENING") {
-      this.listening = payload;
-      this.updateDom();
-    }
-  },
-
-  // Send configuration options to node_helper.js.
-  getConfiguration: function () {
-    return this.config;
-  }
-});
