@@ -7,6 +7,8 @@ NOT WORKING YET
 The "MMM-ChatGPT" module listens for a trigger word that the user sets, such as "elsa". When it hears the trigger word, it starts listening for the user's question. Once the user asks a question, the module sends the question to the [chatgpt](https://www.npmjs.com/package/chatgpt#cli) and receives a response. It then displays the user's question and the API's response on the Magic Mirror in a bright, medium-sized text. The module also generates an audio response from the API's response text and plays it through the Magic Mirror's speakers.
 
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J2EARPK)
+
 Open your terminal and navigate to the modules folder of your Magic Mirror installation by running 
 
 ```
