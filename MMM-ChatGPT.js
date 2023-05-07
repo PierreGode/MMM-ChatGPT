@@ -1,39 +1,25 @@
 Module.register("MMM-ChatGPT", {
   defaults: {
-    updateInterval: 1000,
+    apiKey: "",
+    triggerWord: "elsa",
+    maxQuestions: 5,
+    cooldownTime: 300,
   },
 
   start: function () {
-    this.response = "";
-    this.sendSocketNotification("START_CHATGPT");
+    Log.info("Starting module: " + this.name);
+    this.sendSocketNotification("START_LISTENING");
   },
 
-  getStyles: function () {
-    return ["MMM-ChatGPT.css"];
+  socketNotificationReceived: function (notification, payload) {
+    if (notification === "START_LISTENING") {
+      this.sendSocketNotification("INIT_CHAT", this.config.apiKey);
+    }
   },
 
   getDom: function () {
     const wrapper = document.createElement("div");
-    wrapper.className = "chatgpt-wrapper";
-    const responseElement = document.createElement("div");
-    responseElement.className = "chatgpt-response";
-    responseElement.innerHTML = this.response;
-    wrapper.appendChild(responseElement);
+    wrapper.innerHTML = "MMM-ChatGPT is running. Say the trigger word to start the conversation.";
     return wrapper;
-  },
-
-  socketNotificationReceived: function (notification, payload) {
-    if (notification === "CHATGPT_RESPONSE") {
-      this.response = payload;
-      this.updateDom();
-    }
-  },
-
-  notificationReceived: function (notification, payload, sender) {
-    if (notification === "DOM_OBJECTS_CREATED") {
-      setInterval(() => {
-        this.sendSocketNotification("START_CHATGPT");
-      }, this.config.updateInterval);
-    }
   },
 });
