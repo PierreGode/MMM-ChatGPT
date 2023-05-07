@@ -1,38 +1,36 @@
 const NodeHelper = require("node_helper");
 const { spawn } = require("child_process");
+const path = require("path");
 
 module.exports = NodeHelper.create({
   start: function () {
-    this.pythonProcess = null;
+    this.apiKey = "";
   },
 
   socketNotificationReceived: function (notification, payload) {
-    if (notification === "START_CHATGPT") {
-      this.startPythonScript();
+    if (notification === "INIT_CHAT") {
+      this.apiKey = payload;
+      this.startPythonProcess();
     }
   },
 
-  startPythonScript: function () {
-    const self = this;
-    const pythonScript = "../MMM-ChatGPT/Chat.py";
-    this.pythonProcess = spawn("python3", [pythonScript]);
+  startPythonProcess: function () {
+    const pythonPath = path.join(__dirname, "Chat.py");
+    this.pythonProcess = spawn("python3", [pythonPath, this.apiKey]);
+    this.bindPythonProcessEvents();
+  },
 
+  bindPythonProcessEvents: function () {
     this.pythonProcess.stdout.on("data", (data) => {
-      self.sendSocketNotification("CHATGPT_RESPONSE", data.toString());
+      console.log(`stdout: ${data}`);
     });
 
     this.pythonProcess.stderr.on("data", (data) => {
-      console.error(`Python script error: ${data}`);
+      console.error(`stderr: ${data}`);
     });
 
     this.pythonProcess.on("close", (code) => {
-      console.log(`Python script exited with code ${code}`);
+      console.log(`Python process exited with code ${code}`);
     });
-  },
-
-  stop: function () {
-    if (this.pythonProcess) {
-      this.pythonProcess.kill();
-    }
   },
 });
