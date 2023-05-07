@@ -35,11 +35,10 @@ In your Magic Mirror's config.js file, add the following configuration object fo
 ```
 {
   module: "MMM-ChatGPT",
-  position: "top_right",
-  header: "ChatGPT"
+  position: "bottom_bar", // You can change this to any desired position.
   config: {
-    apiKey: "YOUR_OPENAI_API_KEY_HERE",
-    triggerWord: "elsa"
+    updateInterval: 1000, // Adjust this value if you want to change the update interval.
   }
-}
+},
+
 ```
