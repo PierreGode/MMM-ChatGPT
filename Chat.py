@@ -61,7 +61,7 @@ while True:
         if not response_text:
             response_text = "I'm sorry, I didn't understand what you said. Can you please repeat?"
 
-        print("Response: ", response_text)
+        print("CHATGPT_RESPONSE: ", response_text)
         # generate audio from response text
         generate_audio_from_text(response_text)
         # play the audio file
@@ -73,7 +73,7 @@ while True:
             questions_asked = 0
     elif voice_command:
         response_text = "I'm sorry, I didn't understand what you said. Can you please repeat?"
-        print("Response: ", response_text)
+        print("CHATGPT_RESPONSE: ", response_text)
         # generate audio from response text
         generate_audio_from_text(response_text)
         # play the audio file
