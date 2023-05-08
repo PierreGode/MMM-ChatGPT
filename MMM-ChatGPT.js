@@ -8,16 +8,46 @@ Module.register("MMM-ChatGPT", {
 
   start: function () {
     Log.info("Starting module: " + this.name);
+    this.sendSocketNotification("INIT_CHAT", this.config.apiKey);
     this.response = "";
-    this.sendSocketNotification("START_LISTENING");
+    this.lastActivityTime = 0;
+    this.questionsAsked = 0;
   },
 
   socketNotificationReceived: function (notification, payload) {
-    if (notification === "START_LISTENING") {
-      this.sendSocketNotification("INIT_CHAT", this.config.apiKey);
-    } else if (notification === "RESPONSE_TEXT") {
+    if (notification === "RESPONSE_TEXT") {
       this.response = payload;
       this.updateDom();
+      this.playAudioResponse();
+      this.refreshLastActivityTime();
+      this.checkQuestionLimit();
+    }
+  },
+
+  playAudioResponse: function () {
+    if (this.response) {
+      const audio = new Audio(`modules/${this.name}/response.mp3`);
+      audio.play();
+    }
+  },
+
+  refreshLastActivityTime: function () {
+    this.lastActivityTime = new Date().getTime() / 1000;
+  },
+
+  checkQuestionLimit: function () {
+    const elapsed = new Date().getTime() / 1000 - this.lastActivityTime;
+    if (elapsed > this.config.cooldownTime) {
+      this.questionsAsked = 0;
+    }
+    if (this.response && ++this.questionsAsked >= this.config.maxQuestions) {
+      this.sendNotification("SHOW_ALERT", {
+        title: "ChatGPT",
+        message: "Conversation limit reached. Wait for cooldown.",
+        type: "notification",
+        timer: 5000,
+      });
+      this.questionsAsked = 0;
     }
   },
 
