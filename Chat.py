@@ -1,4 +1,3 @@
-#OpenAI Talk to ChatGPT by Pierre Gode
 import openai
 import speech_recognition as sr
 from gtts import gTTS
@@ -34,23 +33,27 @@ def generate_audio_from_text(text):
 
 # main loop to continuously listen for voice
 # commands and generate audio responses
-start_time = time.time()
-questions_asked = 0
+conversation_history = ""
+last_activity_time = time.time()
+
 while True:
-    elapsed_time = time.time() - start_time
-    if elapsed_time >= 300:
-        print("Time limit reached, waiting for the trigger word...")
-        questions_asked = 0
-        start_time = time.time()
+    # Check for inactivity and reset the conversation history after 5 minutes
+    if time.time() - last_activity_time >= 300:
+        conversation_history = ""
+        last_activity_time = time.time()
 
     # transcribe voice command to text
     voice_command = transcribe_speech_to_text()
     if voice_command and "elsa" in voice_command.lower():
         print("Processing request...")
+        
+        # Append the user's command to the conversation history
+        conversation_history += f"User: {voice_command}\n"
+        
         # send text request to OpenAI API
         response = openai.Completion.create(
             engine="text-davinci-002",
-            prompt=voice_command,
+            prompt=conversation_history,  # Pass the conversation history instead of just the voice_command
             max_tokens=1024, n=1, stop=None,
             temperature=0.5,
         )
@@ -62,15 +65,18 @@ while True:
             response_text = "I'm sorry, I didn't understand what you said. Can you please repeat?"
 
         print("CHATGPT_RESPONSE: ", response_text)
+        
+        # Append ChatGPT's response to the conversation history
+        conversation_history += f"ChatGPT: {response_text}\n"
+        
         # generate audio from response text
         generate_audio_from_text(response_text)
         # play the audio file
         system("mpg321 response.mp3")
 
-        questions_asked += 1
-        if questions_asked >= 5:
-            print("5 questions limit reached, waiting for the trigger word...")
-            questions_asked = 0
+        # Refresh the last activity time
+        last_activity_time = time.time()
+
     elif voice_command:
         response_text = "I'm sorry, I didn't understand what you said. Can you please repeat?"
         print("CHATGPT_RESPONSE: ", response_text)
