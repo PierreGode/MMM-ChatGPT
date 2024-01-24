@@ -17,7 +17,7 @@ logging.basicConfig(filename='chatgpt.log', level=logging.INFO,
 
 # Function to convert voice commands to text
 def transcribe_speech_to_text():
-    with sr.Microphone() as source:
+    with sr.Microphone(device_index=1) as source:  # Use device_index=1 for Headphones
         logging.info("Listening for voice command...")
         print("Listening for voice command...")
         audio = r.listen(source)
