@@ -17,7 +17,7 @@ logging.basicConfig(filename='chatgpt.log', level=logging.INFO,
 
 # Function to convert voice commands to text
 def transcribe_speech_to_text():
-    with sr.Microphone() as source:
+    with sr.Microphone(device_index=YOUR_DEVICE_INDEX) as source:
         logging.info("Listening for voice command...")
         print("Listening for voice command...")
         audio = r.listen(source)
@@ -35,7 +35,7 @@ def generate_audio_from_text(text):
 
 # Main loop to continuously listen for voice
 # commands and generate audio responses
-conversation_history = ""
+conversation_history = []
 last_activity_time = time.time()
 
 def main():
@@ -49,7 +49,7 @@ def main():
     while True:
         # Check for inactivity and reset the conversation history after 5 minutes
         if time.time() - last_activity_time >= 300:
-            conversation_history = ""
+            conversation_history = []
             last_activity_time = time.time()
 
         # Transcribe voice command to text
@@ -58,18 +58,16 @@ def main():
             print("Processing request...")
             
             # Append the user's command to the conversation history
-            conversation_history += f"User: {voice_command}\n"
+            conversation_history.append({"role": "user", "content": voice_command})
             
             # Send text request to OpenAI API
-            response = openai.Completion.create(
-                engine="text-davinci-002",
-                prompt=conversation_history,  # Pass the conversation history instead of just the voice_command
-                max_tokens=1024, n=1, stop=None,
-                temperature=0.5,
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=conversation_history
             )
             
             # Extract response text from API response
-            response_text = response["choices"][0]["text"].strip()
+            response_text = response.choices[0].message["content"].strip()
             
             # Check if the response is empty or not understood
             if not response_text:
@@ -80,7 +78,7 @@ def main():
             print("CHATGPT_RESPONSE: ", response_text)
             
             # Append ChatGPT's response to the conversation history
-            conversation_history += f"ChatGPT: {response_text}\n"
+            conversation_history.append({"role": "assistant", "content": response_text})
             
             # Generate audio from response text
             generate_audio_from_text(response_text)
