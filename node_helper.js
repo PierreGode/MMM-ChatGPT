@@ -39,6 +39,4 @@ module.exports = NodeHelper.create({
       console.error("Error contacting ChatGPT API:", error);
     });
   },
-  
-  // You can add additional helper functions here if needed
 });
