@@ -1,52 +1,44 @@
 const NodeHelper = require("node_helper");
-const { spawn } = require("child_process");
-const path = require("path");
-const tail = require("tail-file");
+const axios = require("axios");
 
 module.exports = NodeHelper.create({
-  start: function () {
+  start: function() {
     console.log("Starting MMM-ChatGPT node helper...");
     this.apiKey = "";
-    this.logPath = path.join(__dirname, "chatgpt.log");
-    this.lastLogLine = "";
   },
 
-  socketNotificationReceived: function (notification, payload) {
+  socketNotificationReceived: function(notification, payload) {
     console.log("Received socket notification:", notification, "with payload:", payload);
+
     if (notification === "INIT_CHAT") {
       this.apiKey = payload;
-      this.startPythonProcess();
-    } else if (notification === "GET_LAST_LOG_LINE") {
-      this.sendSocketNotification("LAST_LOG_LINE", this.lastLogLine);
+    } else if (notification === "SEND_MESSAGE") {
+      this.handleChatGPTRequest(payload);
     }
   },
 
-  startPythonProcess: function () {
-    console.log("Starting Python process...");
-    const pythonPath = path.join(__dirname, "Chat.py");
-    this.pythonProcess = spawn("python3", [pythonPath, this.apiKey]);
-    this.bindPythonProcessEvents();
-  },
+  handleChatGPTRequest: function(message) {
+    if (this.apiKey === "") {
+      console.error("API key is not set. Check your Magic Mirror's config.js file.");
+      return;
+    }
 
-  bindPythonProcessEvents: function () {
-    console.log("Binding Python process events...");
-    this.pythonProcess.stdout.on("data", (data) => {
-      console.log(`stdout: ${data}`);
-    });
-
-    this.pythonProcess.stderr.on("data", (data) => {
-      console.error(`stderr: ${data}`);
-    });
-
-    this.pythonProcess.on("close", (code) => {
-      console.log(`Python process exited with code ${code}`);
-    });
-
-    // Listen for changes in the log file and emit the last line to the client
-    tail.onNewLine(this.logPath, (line) => {
-      console.log(`Log line: ${line}`);
-      this.lastLogLine = line;
-      this.sendSocketNotification("NEW_LOG_LINE", line);
+    axios.post('https://api.openai.com/v1/engines/davinci-codex/completions', {
+      prompt: message,
+      max_tokens: 150
+    }, {
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`
+      }
+    })
+    .then(response => {
+      const chatResponse = response.data.choices[0].text.trim();
+      this.sendSocketNotification("CHAT_RESPONSE", chatResponse);
+    })
+    .catch(error => {
+      console.error("Error contacting ChatGPT API:", error);
     });
   },
+  
+  // You can add additional helper functions here if needed
 });
