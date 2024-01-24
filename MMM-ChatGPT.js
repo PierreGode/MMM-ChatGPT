@@ -6,7 +6,7 @@ Module.register("MMM-ChatGPT", {
     cooldownTime: 300,
   },
 
-  start: function () {
+  start: function() {
     Log.info("Starting module: " + this.name);
     this.sendSocketNotification("INIT_CHAT", this.config.apiKey);
     this.response = "";
@@ -14,8 +14,8 @@ Module.register("MMM-ChatGPT", {
     this.questionsAsked = 0;
   },
 
-  socketNotificationReceived: function (notification, payload) {
-    if (notification === "RESPONSE_TEXT") {
+  socketNotificationReceived: function(notification, payload) {
+    if (notification === "CHAT_RESPONSE") {
       this.response = payload;
       this.updateDom();
       this.playAudioResponse();
@@ -24,18 +24,24 @@ Module.register("MMM-ChatGPT", {
     }
   },
 
-  playAudioResponse: function () {
+  notificationReceived: function(notification, payload) {
+    if (notification === "TRIGGER_WORD_DETECTED" && payload === this.config.triggerWord) {
+      this.sendSocketNotification("SEND_MESSAGE", "Your message to ChatGPT");
+    }
+  },
+
+  playAudioResponse: function() {
     if (this.response) {
       const audio = new Audio(`modules/${this.name}/response.mp3`);
       audio.play();
     }
   },
 
-  refreshLastActivityTime: function () {
+  refreshLastActivityTime: function() {
     this.lastActivityTime = new Date().getTime() / 1000;
   },
 
-  checkQuestionLimit: function () {
+  checkQuestionLimit: function() {
     const elapsed = new Date().getTime() / 1000 - this.lastActivityTime;
     if (elapsed > this.config.cooldownTime) {
       this.questionsAsked = 0;
@@ -51,7 +57,7 @@ Module.register("MMM-ChatGPT", {
     }
   },
 
-  getDom: function () {
+  getDom: function() {
     const wrapper = document.createElement("div");
     if (this.response) {
       wrapper.innerHTML = this.response;
