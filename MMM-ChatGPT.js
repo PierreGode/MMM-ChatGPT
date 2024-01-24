@@ -12,6 +12,30 @@ Module.register("MMM-ChatGPT", {
     this.response = "";
     this.lastActivityTime = 0;
     this.questionsAsked = 0;
+    this.initializeVoiceRecognition();
+  },
+
+  initializeVoiceRecognition: function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = true;
+      this.recognition.lang = 'en-US';
+      this.recognition.interimResults = false;
+      this.recognition.maxAlternatives = 1;
+
+      this.recognition.onresult = (event) => {
+        const last = event.results.length - 1;
+        const text = event.results[last][0].transcript;
+        if (text.trim().toLowerCase() === this.config.triggerWord.toLowerCase()) {
+          this.sendSocketNotification("SEND_MESSAGE", "Your message to ChatGPT");
+        }
+      };
+
+      this.recognition.start();
+    } else {
+      Log.error("Browser does not support Speech Recognition");
+    }
   },
 
   socketNotificationReceived: function(notification, payload) {
@@ -21,12 +45,6 @@ Module.register("MMM-ChatGPT", {
       this.playAudioResponse();
       this.refreshLastActivityTime();
       this.checkQuestionLimit();
-    }
-  },
-
-  notificationReceived: function(notification, payload) {
-    if (notification === "TRIGGER_WORD_DETECTED" && payload === this.config.triggerWord) {
-      this.sendSocketNotification("SEND_MESSAGE", "Your message to ChatGPT");
     }
   },
 
