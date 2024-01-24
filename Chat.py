@@ -16,8 +16,8 @@ logging.basicConfig(filename='chatgpt.log', level=logging.INFO,
                     format='%(asctime)s:%(levelname)s:%(message)s')
 
 # Function to convert voice commands to text
-def transcribe_speech_to_text(device_index):
-    with sr.Microphone(device_index=device_index) as source:
+def transcribe_speech_to_text():
+    with sr.Microphone() as source:
         logging.info("Listening for voice command...")
         print("Listening for voice command...")
         audio = r.listen(source)
@@ -46,15 +46,6 @@ def main():
     logging.info("Starting conversation...")
     print("Starting conversation...")
 
-    # List available audio input devices
-    microphone_list = sr.Microphone.list_microphone_names()
-    print("Available audio input devices:")
-    for index, device in enumerate(microphone_list):
-        print(f"Device Index {index}: {device}")
-    
-    # Get the device index for your Bluetooth headset
-    device_index = int(input("Enter the device index for your Bluetooth headset: "))
-
     while True:
         # Check for inactivity and reset the conversation history after 5 minutes
         if time.time() - last_activity_time >= 300:
@@ -62,7 +53,7 @@ def main():
             last_activity_time = time.time()
 
         # Transcribe voice command to text
-        voice_command = transcribe_speech_to_text(device_index)
+        voice_command = transcribe_speech_to_text()
         if voice_command and "elsa" in voice_command.lower():
             print("Processing request...")
             
