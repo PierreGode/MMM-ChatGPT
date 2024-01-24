@@ -1,0 +1,22 @@
+{
+    "name": "MMM-ChatGPT",
+    "version": "1.0.0",
+    "description": "A module for the MagicMirror² for chatgtp",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/PierreGode/MMM-ChatGPT.git"
+    },
+    "keywords": [
+        "chatgtp",
+        "ai",
+        "assistant",
+        "chat"
+    ],
+    "author": "PierreGode",
+    "license": "GPL-3.0-only",
+    "dependencies": {
+        "openai": "^4.0.0",
+        "axios": "^0.27.2",
+        "dotenv": "^16.0.1"
+    }
+}
