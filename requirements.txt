@@ -1,0 +1,6 @@
+openai
+pygame
+PyAudio
+setuptools
+SpeechRecognition
+python-Levenshtein
