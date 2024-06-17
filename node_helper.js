@@ -13,7 +13,7 @@ module.exports = NodeHelper.create({
   },
 
   processMessage: function(message) {
-    exec(`python3 path/to/Chat.py ${message}`, (error, stdout, stderr) => {
+    exec(`python3 path/to/Chat.py "${message}"`, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
         return;
@@ -23,7 +23,6 @@ module.exports = NodeHelper.create({
         return;
       }
 
-      // Assuming the Python script prints the response text and audio file path
       const [responseText, audioFilePath] = stdout.split(":::");
       this.sendSocketNotification("CHAT_RESPONSE", {
         text: responseText,
