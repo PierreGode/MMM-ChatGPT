@@ -32,7 +32,7 @@ Module.register("MMM-ChatGPT", {
 
   socketNotificationReceived: function(notification, payload) {
     if (notification === "CHAT_RESPONSE") {
-      this.response = payload;
+      this.response = payload.text;
       this.updateDom();
       this.playAudioResponse(payload.audioFile);
       this.refreshLastActivityTime();
