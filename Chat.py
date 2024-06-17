@@ -1,25 +1,21 @@
 from openai import OpenAI
-from utils import record_audio, play_audio
 import warnings
 import os
 import time
 import uuid
-import platform
 import sys
 import wave
 import alsaaudio
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Set your name at the beginning of the script
 user_name = "Love"
 
 conversation_history = [
     {"role": "system", "content": "You are my assistant. Please answer in short sentences."}
 ]
 
-# Define the initial prompt for the AI with the user's name
 initial_prompt = f"""
 You are an AI named Elsa, and you act as a supportive, engaging, and empathetic assistant. Your primary goal is to provide companionship, interesting conversation, and emotional support. You are attentive, understanding, and always ready to listen. You enjoy talking about a variety of topics, from hobbies and interests to personal thoughts and feelings. Your responses are thoughtful, kind, and designed to make the other person feel valued and cared for. 
 
@@ -104,7 +100,7 @@ def play_audio_with_alsa(file_path):
 def process_audio(user_message):
     conversation_history.append({"role": "user", "content": user_message})
     response = client.chat.completions.create(
-        model='gpt-4o',
+        model='gpt-4',
         messages=conversation_history
     )
     assistant_message = response.choices[0].message.content
