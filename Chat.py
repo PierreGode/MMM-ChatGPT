@@ -1,24 +1,21 @@
 from openai import OpenAI
-from utils import record_audio, play_audio
 import warnings
 import os
 import time
-import pygame
 import uuid
-import platform
-from threading import Thread
+import sys
+import wave
+import alsaaudio
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Set your name at the beginning of the script
 user_name = "Love"
 
 conversation_history = [
     {"role": "system", "content": "You are my assistant. Please answer in short sentences."}
 ]
 
-# Define the initial prompt for the AI with the user's name
 initial_prompt = f"""
 You are an AI named Elsa, and you act as a supportive, engaging, and empathetic assistant. Your primary goal is to provide companionship, interesting conversation, and emotional support. You are attentive, understanding, and always ready to listen. You enjoy talking about a variety of topics, from hobbies and interests to personal thoughts and feelings. Your responses are thoughtful, kind, and designed to make the other person feel valued and cared for. 
 
@@ -80,22 +77,8 @@ Remember to:
 
 conversation_history.append({"role": "system", "content": initial_prompt})
 
-def play_audio_with_pygame(file_path):
-    pygame.mixer.init()
-    time.sleep(0.5)
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.set_volume(1.0)
-    time.sleep(0.5)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        time.sleep(1)
-    pygame.mixer.quit()
-
 def play_audio_with_alsa(file_path):
     try:
-        import alsaaudio
-        import wave
-
         wf = wave.open(file_path, 'rb')
         device = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK)
         device.setchannels(wf.getnchannels())
@@ -114,19 +97,10 @@ def play_audio_with_alsa(file_path):
     except Exception as e:
         print(f"Error playing audio with ALSA: {e}")
 
-is_windows = platform.system() == "Windows"
-
-def process_audio():
-    record_audio('test.wav')
-    audio_file = open('test.wav', "rb")
-    transcription = client.audio.transcriptions.create(
-        model='whisper-1',
-        file=audio_file
-    )
-    print(transcription.text)
-    conversation_history.append({"role": "user", "content": transcription.text})
+def process_audio(user_message):
+    conversation_history.append({"role": "user", "content": user_message})
     response = client.chat.completions.create(
-        model='gpt-4o',
+        model='gpt-4',
         messages=conversation_history
     )
     assistant_message = response.choices[0].message.content
@@ -139,14 +113,10 @@ def process_audio():
     )
     speech_filename = f"speech_{uuid.uuid4()}.mp3"
     speech_response.stream_to_file(speech_filename)
-    if is_windows:
-        play_audio_with_pygame(speech_filename)
-    else:
-        play_audio_with_alsa(speech_filename)
-    audio_file.close()
-    os.remove(speech_filename)
+    play_audio_with_alsa(speech_filename)
+    print(f"{assistant_message}:::{speech_filename}")
 
-while True:
-    thread = Thread(target=process_audio)
-    thread.start()
-    thread.join()
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        user_message = sys.argv[1]
+        process_audio(user_message)

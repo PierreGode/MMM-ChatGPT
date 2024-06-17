@@ -16,33 +16,33 @@ Module.register("MMM-ChatGPT", {
   },
 
   initializeVoiceRecognition: function() {
-    const speechRecognition = require('speech-recognition');
-    this.recognition = speechRecognition();
-    const microphone = this.recognition.microphone;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = true;
 
-    microphone.on('data', (data) => {
-      const voiceCommand = data.toString().trim().toLowerCase();
-      if (voiceCommand === this.config.triggerWord.toLowerCase()) {
-        this.sendSocketNotification("SEND_MESSAGE", "Your message to ChatGPT");
+    this.recognition.onresult = (event) => {
+      const transcript = event.results[event.resultIndex][0].transcript.trim().toLowerCase();
+      if (transcript.includes(this.config.triggerWord.toLowerCase())) {
+        this.sendSocketNotification("SEND_MESSAGE", transcript);
       }
-    });
+    };
 
     this.recognition.start();
   },
 
   socketNotificationReceived: function(notification, payload) {
     if (notification === "CHAT_RESPONSE") {
-      this.response = payload;
+      this.response = payload.text;
       this.updateDom();
-      this.playAudioResponse();
+      this.playAudioResponse(payload.audioFile);
       this.refreshLastActivityTime();
       this.checkQuestionLimit();
     }
   },
 
-  playAudioResponse: function() {
-    if (this.response) {
-      const audio = new Audio(`modules/${this.name}/response.mp3`);
+  playAudioResponse: function(audioFile) {
+    if (audioFile) {
+      const audio = new Audio(audioFile);
       audio.play();
     }
   },
