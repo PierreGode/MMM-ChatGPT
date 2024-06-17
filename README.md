@@ -44,3 +44,4 @@ In your Magic Mirror's config.js file, add the following configuration object fo
 
 
 ```
+#Created by Pierre Gode
