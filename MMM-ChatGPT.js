@@ -23,7 +23,7 @@ Module.register("MMM-ChatGPT", {
     this.recognition.onresult = (event) => {
       const transcript = event.results[event.resultIndex][0].transcript.trim().toLowerCase();
       if (transcript.includes(this.config.triggerWord.toLowerCase())) {
-        this.sendSocketNotification("SEND_MESSAGE", "Your message to ChatGPT");
+        this.sendSocketNotification("SEND_MESSAGE", transcript);
       }
     };
 
