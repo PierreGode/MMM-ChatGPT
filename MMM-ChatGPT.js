@@ -72,7 +72,7 @@ Module.register("MMM-ChatGPT", {
     if (this.response) {
       wrapper.innerHTML = this.response;
     } else {
-      wrapper.innerHTML = "MMM-ChatGPT is running. Say the trigger word to start the conversation.";
+      wrapper.innerHTML = "";
     }
     return wrapper;
   },
