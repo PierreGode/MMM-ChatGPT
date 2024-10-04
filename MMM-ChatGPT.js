@@ -1,36 +1,35 @@
+const { exec } = require("child_process");
+
 Module.register("MMM-ChatGPT", {
   defaults: {
-    apiKey: "",
     triggerWord: "elsa",
     maxQuestions: 5,
     cooldownTime: 300,
   },
 
-  start: function() {
+  start: function () {
     Log.info("Starting module: " + this.name);
-    this.sendSocketNotification("INIT_CHAT", this.config.apiKey);
     this.response = "";
     this.lastActivityTime = 0;
     this.questionsAsked = 0;
-    this.initializeVoiceRecognition();
+    this.listenForVoiceCommand();
   },
 
-  initializeVoiceRecognition: function() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true;
-
-    this.recognition.onresult = (event) => {
-      const transcript = event.results[event.resultIndex][0].transcript.trim().toLowerCase();
+  listenForVoiceCommand: function () {
+    // Call the Python script for voice command
+    exec("python3 " + this.file("Chat.py"), (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error}`);
+        return;
+      }
+      const transcript = stdout.trim().toLowerCase();
       if (transcript.includes(this.config.triggerWord.toLowerCase())) {
         this.sendSocketNotification("SEND_MESSAGE", transcript);
       }
-    };
-
-    this.recognition.start();
+    });
   },
 
-  socketNotificationReceived: function(notification, payload) {
+  socketNotificationReceived: function (notification, payload) {
     if (notification === "CHAT_RESPONSE") {
       this.response = payload.text;
       this.updateDom();
@@ -40,18 +39,22 @@ Module.register("MMM-ChatGPT", {
     }
   },
 
-  playAudioResponse: function(audioFile) {
-    if (audioFile) {
-      const audio = new Audio(audioFile);
-      audio.play();
-    }
+  playAudioResponse: function (audioFile) {
+    // Call the Python script for audio playback
+    exec(`python3 ${this.file("utils.py")} ${audioFile}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error playing audio: ${error}`);
+        return;
+      }
+      console.log("Audio played successfully.");
+    });
   },
 
-  refreshLastActivityTime: function() {
+  refreshLastActivityTime: function () {
     this.lastActivityTime = new Date().getTime() / 1000;
   },
 
-  checkQuestionLimit: function() {
+  checkQuestionLimit: function () {
     const elapsed = new Date().getTime() / 1000 - this.lastActivityTime;
     if (elapsed > this.config.cooldownTime) {
       this.questionsAsked = 0;
@@ -67,12 +70,12 @@ Module.register("MMM-ChatGPT", {
     }
   },
 
-  getDom: function() {
+  getDom: function () {
     const wrapper = document.createElement("div");
     if (this.response) {
       wrapper.innerHTML = this.response;
     } else {
-      wrapper.innerHTML = "";
+      wrapper.innerHTML = "Waiting for voice command...";
     }
     return wrapper;
   },
