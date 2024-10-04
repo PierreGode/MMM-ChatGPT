@@ -25,8 +25,8 @@ cd MMM-ChatGPT/
 Install the necessary dependencies for the module by running the following commands in the terminal within the MMM-ChatGPT folde
 
 ```
-pip3 install openai googletrans==4.0.0-rc1 gtts SpeechRecognition
-sudo sudo apt-get install portaudio19-dev
+sudo apt-get install python3-pyaudio install portaudio19-de
+pip3 install SpeechRecognition pygame gtts openai
 ```
 In your Magic Mirror's config.js file, add the following configuration object for the "MMM-ChatGTP" module:
 
