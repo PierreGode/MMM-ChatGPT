@@ -1,15 +1,6 @@
-import speech_recognition as sr
 import pygame
+import sys
 import time
-
-def record_audio(file_path):
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Please say something...")
-        audio_data = recognizer.listen(source)
-        print("Recording complete.")
-        with open(file_path, "wb") as audio_file:
-            audio_file.write(audio_data.get_wav_data())
 
 def play_audio(file_path):
     pygame.mixer.init()
@@ -18,3 +9,11 @@ def play_audio(file_path):
 
     while pygame.mixer.music.get_busy():
         time.sleep(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python3 utils.py <audio_file_path>")
+        sys.exit(1)
+    
+    audio_file_path = sys.argv[1]
+    play_audio(audio_file_path)
