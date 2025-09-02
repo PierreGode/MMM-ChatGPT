@@ -1,32 +1,47 @@
 const NodeHelper = require("node_helper");
-const { exec } = require("child_process");
+const { spawn } = require("child_process");
+const path = require("path");
 
 module.exports = NodeHelper.create({
   start: function() {
     console.log("MMM-ChatGPT helper started...");
+    this.apiKey = null;
+    this.scriptPath = path.join(__dirname, "Chat.py");
   },
 
   socketNotificationReceived: function(notification, payload) {
-    if (notification === "SEND_MESSAGE") {
+    if (notification === "INIT_CHAT") {
+      this.apiKey = payload;
+    } else if (notification === "SEND_MESSAGE") {
       this.processMessage(payload);
     }
   },
 
   processMessage: function(message) {
-    exec(`python3 path/to/Chat.py "${message}"`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        return;
-      }
-      if (stderr) {
-        console.error(`Stderr: ${stderr}`);
-        return;
-      }
+    const pythonProcess = spawn("python3", [this.scriptPath, message], {
+      env: { ...process.env, OPENAI_API_KEY: this.apiKey },
+    });
 
+    let stdout = "";
+    let stderr = "";
+
+    pythonProcess.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    pythonProcess.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    pythonProcess.on("close", (code) => {
+      if (code !== 0) {
+        console.error(`Chat.py exited with code ${code}: ${stderr}`);
+        return;
+      }
       const [responseText, audioFilePath] = stdout.split(":::");
       this.sendSocketNotification("CHAT_RESPONSE", {
         text: responseText,
-        audioFile: audioFilePath.trim(),
+        audioFile: audioFilePath && audioFilePath.trim(),
       });
     });
   },

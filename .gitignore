@@ -1,0 +1,3 @@
+node_modules/
+speech_*.mp3
+__pycache__/
