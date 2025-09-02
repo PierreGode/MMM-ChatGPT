@@ -105,7 +105,6 @@ def process_audio(user_message):
     )
     assistant_message = response.choices[0].message.content
     conversation_history.append({"role": "assistant", "content": assistant_message})
-    print(assistant_message)
     speech_response = client.audio.speech.create(
         model="tts-1",
         voice="nova",
