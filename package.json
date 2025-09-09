@@ -16,7 +16,7 @@
     "license": "GPL-3.0-only",
     "dependencies": {
         "openai": "^4.0.0",
-        "axios": "^0.27.2",
+        "axios": "^1.7.8",
         "dotenv": "^16.0.1"
     }
 }
